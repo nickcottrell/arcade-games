@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VRGB Arcade</title>
+
+    <!-- Haberdash CSS (base components + default tokens) -->
+    <link rel="stylesheet" href="https://nickcottrell.github.io/haberdash/haberdash.css">
+
+    <!-- xterm.js styles -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5/css/xterm.min.css">
+
+    <!-- Dynamic VRGB tokens (injected by Spectra) -->
+    <style id="vrgb-tokens">/* Tokens will be injected here by JavaScript */</style>
+
+    <!-- VRGB Theme (static fallback) -->
+    <link rel="stylesheet" href="/static/css/arcade-theme.css?v={{ cache_bust }}">
+
+    <!-- Layout/Structure (arcade-specific) -->
+    <link rel="stylesheet" href="/static/css/arcade.css?v={{ cache_bust }}">
+
+    <!-- Spectra Theme Loader -->
+    <script>
+        var THEME_NODE_ID = 'haberdash-ui-theme';
+        var API_BASE = 'https://zf8klzvd4k.execute-api.us-east-2.amazonaws.com/prod';
+
+        function loadTheme() {
+            fetch(API_BASE + '/api/node?node_id=' + THEME_NODE_ID)
+                .then(function (r) { return r.json(); })
+                .then(function (nodeData) {
+                    if (nodeData.unstyled || !nodeData.vrgb) return;
+                    var params = new URLSearchParams({
+                        d1_hsl: nodeData.vrgb.d1_hsl.join(','),
+                        d2_lab: nodeData.vrgb.d2_lab.join(','),
+                        d3_lab: nodeData.vrgb.d3_lab.join(','),
+                        d4_lab: nodeData.vrgb.d4_lab.join(',')
+                    });
+                    return fetch(API_BASE + '/api/generate?' + params);
+                })
+                .then(function (r) { return r && r.json(); })
+                .then(function (data) {
+                    if (!data || !data.tokens) return;
+                    var cssRules = data.tokens.__css_rules__ || '';
+                    var tokenCSS = Object.entries(data.tokens)
+                        .filter(function (e) { return e[0] !== '__css_rules__'; })
+                        .map(function (e) { return e[0] + ': ' + e[1] + ';'; })
+                        .join(' ');
+                    document.getElementById('vrgb-tokens').textContent =
+                        ':root { ' + tokenCSS + ' }\n\n' + cssRules;
+                })
+                .catch(function () { /* static fallback */ });
+        }
+        loadTheme();
+    </script>
+</head>
+<body>
+    <!-- ============ Picker ============ -->
+    <div class="card cabinet-frame">
+        <div class="card__body cabinet-picker">
+
+            <div class="card rom-rack">
+                <header class="rom-rack-header">
+                    <h3 class="font-md font-bold">Games</h3>
+                </header>
+                <div class="card__body rom-rack-body">
+                    {% for rom in roms %}
+                    <button type="button"
+                            class="btn btn--sm btn--secondary rom-banner"
+                            draggable="true"
+                            data-slug="{{ rom.slug }}"
+                            data-title="{{ rom.title }}"
+                            data-description="{{ rom.description }}"
+                            data-cols="{{ rom.cols | default(80) }}"
+                            data-rows="{{ rom.rows | default(30) }}"
+                            data-status="{{ rom.status }}">{{ rom.title }}</button>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="cartridge-slot">
+                <div class="upload rom-drop" id="rom-drop">
+                    <span class="upload__label font-xl font-bold" id="drop-label">Drop Games Here</span>
+                    <span class="upload__hint font-sm" id="drop-hint">Drag a game from the list</span>
+                </div>
+
+                {% if not server_up %}
+                <div class="alert alert--warning mt-sm">
+                    <p class="alert__message font-sm">cue-vox offline</p>
+                </div>
+                {% endif %}
+
+                <div class="flex gap-sm mt-sm">
+                    <button class="btn btn--warning btn--sm" id="btn-play" disabled>Play</button>
+                    <button class="btn btn--error btn--sm" id="btn-eject" disabled>Eject</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <footer class="powered-by">
+        <p class="powered-by__text font-sm">Powered by <a href="https://github.com/nickcottrell/vrgb-spec" class="powered-by__link">VRGB</a></p>
+    </footer>
+
+    <!-- ============ Lightbox (hidden) ============ -->
+    <div class="lightbox-backdrop" id="lightbox">
+        <div class="lightbox-stage">
+            <div class="screen-bezel">
+                <div class="screen-viewport">
+                    <div id="terminal"></div>
+                </div>
+            </div>
+            <div class="lightbox-controls">
+                <div class="lightbox-buttons">
+                    <button class="btn btn--warning btn--sm" id="btn-reset">Reset</button>
+                    <button class="btn btn--error btn--sm" id="btn-off">Off</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5/lib/xterm.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+    (function () {
+        // ============ Picker state ============
+        var selected = null;
+        var banners = document.querySelectorAll(".rom-banner");
+        var dropZone = document.getElementById("rom-drop");
+        var dropLabel = document.getElementById("drop-label");
+        var dropHint = document.getElementById("drop-hint");
+        var btnPlay = document.getElementById("btn-play");
+        var btnEject = document.getElementById("btn-eject");
+
+        // ============ Lightbox state ============
+        var lightbox = document.getElementById("lightbox");
+        var termContainer = document.getElementById("terminal");
+        var btnReset = document.getElementById("btn-reset");
+        var btnOff = document.getElementById("btn-off");
+
+        var term = null;
+        var socket = null;
+        var activeSlug = null;
+        var activeCols = 80;
+        var activeRows = 30;
+        var resizeObserver = null;
+
+        // ============ Picker functions ============
+
+        function contrastColor(rgb) {
+            var m = rgb.match(/\d+/g);
+            if (!m) return "#000";
+            var lum = (0.299 * m[0] + 0.587 * m[1] + 0.114 * m[2]) / 255;
+            return lum > 0.5 ? "#000" : "#fff";
+        }
+
+        function loadRom(el) {
+            banners.forEach(function (b) { b.classList.remove("rom-banner--selected"); });
+            el.classList.add("rom-banner--selected");
+            selected = {
+                slug: el.dataset.slug,
+                title: el.dataset.title,
+                description: el.dataset.description,
+                cols: parseInt(el.dataset.cols, 10) || 80,
+                rows: parseInt(el.dataset.rows, 10) || 30
+            };
+            dropZone.classList.add("rom-drop--loaded");
+            var fg = contrastColor(getComputedStyle(el).backgroundColor);
+            dropLabel.style.setProperty("color", fg, "important");
+            dropHint.style.setProperty("color", fg, "important");
+            dropLabel.textContent = selected.title;
+            dropHint.textContent = selected.description;
+            btnPlay.disabled = false;
+            btnEject.disabled = false;
+            notifyOpener({type: "rom_loaded", title: selected.title, slug: selected.slug});
+        }
+
+        function eject() {
+            if (selected) {
+                notifyOpener({type: "rom_ejected", title: selected.title, slug: selected.slug});
+            }
+            banners.forEach(function (b) { b.classList.remove("rom-banner--selected"); });
+            selected = null;
+            dropZone.classList.remove("rom-drop--loaded");
+            dropLabel.style.removeProperty("color");
+            dropHint.style.removeProperty("color");
+            dropLabel.textContent = "Drop Games Here";
+            dropHint.textContent = "Drag a game from the list";
+            btnPlay.disabled = true;
+            btnEject.disabled = true;
+        }
+
+        function findBanner(slug) {
+            for (var i = 0; i < banners.length; i++) {
+                if (banners[i].dataset.slug === slug) return banners[i];
+            }
+            return null;
+        }
+
+        // ============ Lightbox functions ============
+
+        function stretchToFill() {
+            if (!term) return;
+            var screen = termContainer.querySelector('.xterm-screen');
+            if (!screen) return;
+            var natW = screen.offsetWidth;
+            var natH = screen.offsetHeight;
+            var boxW = termContainer.clientWidth;
+            var boxH = termContainer.clientHeight;
+            if (natW && natH && boxW && boxH) {
+                screen.style.transformOrigin = 'top left';
+                screen.style.transform = 'scale(' + (boxW / natW) + ', ' + (boxH / natH) + ')';
+            }
+        }
+
+        function notifyOpener(payload) {
+            if (window.opener && !window.opener.closed) {
+                window.opener.postMessage(payload, "http://localhost:3000");
+            }
+        }
+
+        function openGame(slug, title, cols, rows) {
+            activeSlug = slug;
+            activeCols = cols;
+            activeRows = rows;
+
+            // Show lightbox
+            lightbox.classList.add("lightbox-backdrop--active");
+
+            // Create terminal
+            var styles = getComputedStyle(document.documentElement);
+            var screenBg = styles.getPropertyValue('--screen-bg').trim() || "#0a0a0a";
+            var screenFg = styles.getPropertyValue('--screen-fg').trim() || "#cccccc";
+
+            term = new Terminal({
+                fontSize: 16,
+                cols: cols,
+                rows: rows,
+                scrollback: 0,
+                cursorBlink: false,
+                theme: { background: screenBg, foreground: screenFg },
+                allowProposedApi: true
+            });
+            term.open(termContainer);
+            term.focus();
+
+            // Stretch observer
+            if (typeof ResizeObserver !== 'undefined') {
+                resizeObserver = new ResizeObserver(stretchToFill);
+                resizeObserver.observe(termContainer);
+            }
+            window.addEventListener("resize", stretchToFill);
+
+            // Socket connection
+            socket = io();
+            socket.on("connect", function () {
+                socket.emit("game_start", { slug: slug, cols: cols, rows: rows });
+            });
+            socket.on("game_output", function (msg) {
+                term.write(msg.data);
+            });
+            socket.on("game_error", function (msg) {
+                term.write("\r\n\x1b[1;31m  Server Required\x1b[0m\r\n\r\n");
+                term.write("  " + msg.message + "\r\n\r\n");
+                term.write("  \x1b[2mStart with:\x1b[0m  ");
+                term.write("\x1b[34m./maestro.sh up\x1b[0m\r\n");
+            });
+            socket.on("game_end", function () {
+                term.write("\r\n\x1b[1;33m[Game ended]\x1b[0m\r\n");
+                notifyOpener({type: "game_over", slug: slug, title: title});
+            });
+
+            term.onData(function (data) {
+                socket.emit("game_input", { data: data });
+            });
+        }
+
+        function closeGame() {
+            // Disconnect socket
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+            }
+            // Destroy terminal
+            if (term) {
+                term.dispose();
+                term = null;
+            }
+            // Stop observer
+            if (resizeObserver) {
+                resizeObserver.disconnect();
+                resizeObserver = null;
+            }
+            window.removeEventListener("resize", stretchToFill);
+
+            // Clear container
+            termContainer.innerHTML = "";
+
+            // Hide lightbox
+            lightbox.classList.remove("lightbox-backdrop--active");
+            activeSlug = null;
+        }
+
+        function resetGame() {
+            if (!term || !socket) return;
+            term.reset();
+            socket.emit("game_reset", { cols: activeCols, rows: activeRows });
+        }
+
+        // ============ Picker events ============
+
+        banners.forEach(function (el) {
+            el.addEventListener("dragstart", function (e) {
+                e.dataTransfer.setData("text/plain", el.dataset.slug);
+                e.dataTransfer.effectAllowed = "copy";
+                el.classList.add("rom-banner--dragging");
+            });
+            el.addEventListener("dragend", function () {
+                el.classList.remove("rom-banner--dragging");
+            });
+            el.addEventListener("click", function () { loadRom(el); });
+        });
+
+        dropZone.addEventListener("dragover", function (e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "copy";
+        });
+        dropZone.addEventListener("dragenter", function (e) {
+            e.preventDefault();
+            dropZone.classList.add("rom-drop--hover");
+        });
+        dropZone.addEventListener("dragleave", function () {
+            dropZone.classList.remove("rom-drop--hover");
+        });
+        dropZone.addEventListener("drop", function (e) {
+            e.preventDefault();
+            dropZone.classList.remove("rom-drop--hover");
+            var slug = e.dataTransfer.getData("text/plain");
+            var el = findBanner(slug);
+            if (el) loadRom(el);
+        });
+
+        btnPlay.addEventListener("click", function () {
+            if (!selected) return;
+            if (socket || term) closeGame();
+            openGame(selected.slug, selected.title, selected.cols, selected.rows);
+        });
+        btnEject.addEventListener("click", eject);
+
+        // ============ Lightbox events ============
+
+        btnOff.addEventListener("click", closeGame);
+        btnReset.addEventListener("click", resetGame);
+
+        // Escape key closes lightbox
+        document.addEventListener("keydown", function (e) {
+            if (e.key === "Escape" && lightbox.classList.contains("lightbox-backdrop--active")) {
+                closeGame();
+            }
+        });
+    })();
+    </script>
+</body>
+</html>

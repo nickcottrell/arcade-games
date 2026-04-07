@@ -1,0 +1,17 @@
+/*
+ * ARCADE-WEB THEME
+ * Static fallback — overridden at runtime by Spectra via #vrgb-tokens.
+ * This file contains ONLY token overrides, no layout or structure.
+ *
+ * Same pattern as cue-vox/static/css/cue-vox-theme.css
+ */
+
+:root {
+  /* Paste generated theme tokens here, or leave for Spectra to inject */
+
+  /* Arcade-specific state tokens — derived from UI theme */
+  --screen-bg: var(--background, #0a0a0a);
+  --screen-fg: var(--text, #cccccc);
+  --banner-bg: var(--secondary, hsl(0, 0%, 40%));
+  --banner-fg: var(--color-white, #fff);
+}

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ rom.title }} — VRGB Arcade</title>
+
+    <!-- Haberdash CSS (base components + default tokens) -->
+    <link rel="stylesheet" href="https://nickcottrell.github.io/haberdash/haberdash.css">
+
+    <!-- xterm.js styles -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5/css/xterm.min.css">
+
+    <!-- Dynamic VRGB tokens (injected by Spectra) -->
+    <style id="vrgb-tokens">/* Tokens will be injected here by JavaScript */</style>
+
+    <!-- VRGB Theme (static fallback) -->
+    <link rel="stylesheet" href="/static/css/arcade-theme.css?v={{ cache_bust }}">
+
+    <!-- Layout/Structure (arcade-specific) -->
+    <link rel="stylesheet" href="/static/css/arcade.css?v={{ cache_bust }}">
+
+    <!-- Spectra Theme Loader -->
+    <script>
+        var THEME_NODE_ID = 'haberdash-ui-theme';
+        var API_BASE = 'https://zf8klzvd4k.execute-api.us-east-2.amazonaws.com/prod';
+
+        function loadTheme() {
+            fetch(API_BASE + '/api/node?node_id=' + THEME_NODE_ID)
+                .then(function (r) { return r.json(); })
+                .then(function (nodeData) {
+                    if (nodeData.unstyled || !nodeData.vrgb) return;
+                    var params = new URLSearchParams({
+                        d1_hsl: nodeData.vrgb.d1_hsl.join(','),
+                        d2_lab: nodeData.vrgb.d2_lab.join(','),
+                        d3_lab: nodeData.vrgb.d3_lab.join(','),
+                        d4_lab: nodeData.vrgb.d4_lab.join(',')
+                    });
+                    return fetch(API_BASE + '/api/generate?' + params);
+                })
+                .then(function (r) { return r && r.json(); })
+                .then(function (data) {
+                    if (!data || !data.tokens) return;
+                    var cssRules = data.tokens.__css_rules__ || '';
+                    var tokenCSS = Object.entries(data.tokens)
+                        .filter(function (e) { return e[0] !== '__css_rules__'; })
+                        .map(function (e) { return e[0] + ': ' + e[1] + ';'; })
+                        .join(' ');
+                    document.getElementById('vrgb-tokens').textContent =
+                        ':root { ' + tokenCSS + ' }\n\n' + cssRules;
+                })
+                .catch(function () { /* static fallback */ });
+        }
+        loadTheme();
+    </script>
+</head>
+<body class="lightbox-body">
+    <div class="lightbox-backdrop">
+        <div class="lightbox-stage">
+            <div class="screen-bezel">
+                <div class="screen-viewport">
+                    <div id="terminal"></div>
+                </div>
+            </div>
+
+            <div class="lightbox-controls">
+                <span class="lightbox-title">{{ rom.title }}</span>
+                <div class="lightbox-buttons">
+                    <button class="btn btn--warning btn--sm" id="btn-reset">Reset</button>
+                    <a href="/" class="btn btn--error btn--sm" id="btn-off">Off</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5/lib/xterm.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+    (function () {
+        var slug = "{{ rom.slug }}";
+        var container = document.getElementById("terminal");
+        var COLS = {{ rom.cols | default(80) }};
+        var ROWS = {{ rom.rows | default(30) }};
+        var BASE_FONT = 16;
+
+        var styles = getComputedStyle(document.documentElement);
+        var screenBg = styles.getPropertyValue('--screen-bg').trim() || "#0a0a0a";
+        var screenFg = styles.getPropertyValue('--screen-fg').trim() || "#cccccc";
+
+        var term = new Terminal({
+            fontSize: BASE_FONT,
+            cols: COLS,
+            rows: ROWS,
+            scrollback: 0,
+            cursorBlink: false,
+            theme: { background: screenBg, foreground: screenFg },
+            allowProposedApi: true
+        });
+
+        term.open(container);
+
+        // Stretch: scale the rendered terminal to fill the square viewport
+        function stretchToFill() {
+            var screen = container.querySelector('.xterm-screen');
+            if (!screen) return;
+            var natW = screen.offsetWidth;
+            var natH = screen.offsetHeight;
+            var boxW = container.clientWidth;
+            var boxH = container.clientHeight;
+            if (natW && natH && boxW && boxH) {
+                screen.style.transformOrigin = 'top left';
+                screen.style.transform = 'scale(' + (boxW / natW) + ', ' + (boxH / natH) + ')';
+            }
+        }
+
+        // Re-stretch whenever the container resizes (initial layout + window resize)
+        if (typeof ResizeObserver !== 'undefined') {
+            new ResizeObserver(stretchToFill).observe(container);
+        }
+
+        var socket = io();
+
+        socket.on("connect", function () {
+            socket.emit("game_start", {
+                slug: slug,
+                cols: COLS,
+                rows: ROWS
+            });
+        });
+
+        socket.on("game_output", function (msg) {
+            term.write(msg.data);
+        });
+
+        socket.on("game_error", function (msg) {
+            term.write("\r\n\x1b[1;31m  Server Required\x1b[0m\r\n\r\n");
+            term.write("  " + msg.message + "\r\n\r\n");
+            term.write("  \x1b[2mStart with:\x1b[0m  ");
+            term.write("\x1b[34m./maestro.sh up\x1b[0m\r\n");
+        });
+
+        socket.on("game_end", function () {
+            term.write("\r\n\x1b[1;33m[Game ended]\x1b[0m\r\n");
+        });
+
+        term.onData(function (data) {
+            socket.emit("game_input", { data: data });
+        });
+
+        window.addEventListener("resize", stretchToFill);
+
+        document.getElementById("btn-reset").addEventListener("click", function () {
+            term.reset();
+            socket.emit("game_reset", { cols: COLS, rows: ROWS });
+        });
+
+        term.focus();
+    })();
+    </script>
+</body>
+</html>

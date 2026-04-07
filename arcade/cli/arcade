@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# ============================================================
+#  ARCADE  --  VRGB App Launcher
+# ============================================================
+#  The main shell for the arcade. Shows a ROM selection menu
+#  and launches apps. When an app exits (Escape or done), you
+#  return here. Escape from this menu exits the arcade.
+#
+#  Usage: arcade/cli/arcade
+# ============================================================
+
+set -euo pipefail
+
+_CLI_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "${_CLI_DIR}/../.." && pwd)"
+
+source "${SCRIPT_DIR}/lib/tui.sh"
+source "${SCRIPT_DIR}/lib/vrgb.sh"
+source "${_CLI_DIR}/../lib/rom-pipeline.sh"
+
+# ============================================================
+# HOME SCREEN
+# ============================================================
+
+show_home() {
+    tput clear 2>/dev/null || printf "\033[2J\033[H"
+    echo ""
+    vrgb_gradient_bar 270 65 45 190 65 55 "${_TUI_COLS}"
+    echo ""
+    echo ""
+    tui_banner --compact
+    _tui_center "${_C_DIM}[Esc] Exit${_C_RESET}"
+    echo ""
+    echo ""
+}
+
+# ============================================================
+# MAIN LOOP
+# ============================================================
+
+while true; do
+    show_home
+
+    rom_menu_items || {
+        echo "  ${_C_RED}No ROMs found.${_C_RESET}" >&2
+        exit 1
+    }
+
+    if [[ ${#ROM_MENU_LABELS[@]} -eq 0 ]]; then
+        echo "  ${_C_DIM}No ROMs in catalog.${_C_RESET}"
+        exit 1
+    fi
+
+    if tui_menu "Select an app" "${ROM_MENU_LABELS[@]}"; then
+        slug="${ROM_MENU_SLUGS[${TUI_INDEX}]}"
+        rom_run "${slug}" || {
+            echo ""
+            echo "  ${_C_YELLOW}${slug}${_C_RESET} exited with error."
+            echo "  ${_C_DIM}Press any key...${_C_RESET}"
+            _tui_read_key
+            _tui_restore_stty
+        }
+    else
+        # Escape from menu -- exit arcade
+        tput clear 2>/dev/null || printf "\033[2J\033[H"
+        break
+    fi
+done

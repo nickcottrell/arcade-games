@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# ============================================================
+#  rom-launch  --  Launch a ROM by slug
+# ============================================================
+#  Usage: rom-launch [slug]
+#
+#  With slug:    runs that ROM, then returns to arcade menu
+#  Without slug: opens the arcade menu directly
+# ============================================================
+
+set -euo pipefail
+
+_CLI_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${_CLI_DIR}/../lib/rom-pipeline.sh"
+
+slug="${1:-}"
+
+# No slug: go straight to arcade menu
+if [[ -z "${slug}" ]]; then
+    exec "${_CLI_DIR}/arcade"
+fi
+
+# Run the ROM (no exec -- we return here when it exits)
+rom_run "${slug}" || true
+
+# Return to arcade menu
+exec "${_CLI_DIR}/arcade"

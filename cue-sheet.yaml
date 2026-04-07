@@ -1,0 +1,21 @@
+name: Play Games
+icon: "\U0001F3AE"
+order: 7
+announce: "Let's play games."
+description: Unwind and play something
+
+panel:
+  url: "http://localhost:3001"
+  width: 520
+  height: 640
+  title: "VRGB Arcade"
+
+cues:
+  - id: arcade
+    objective: The arcade window is open. Wait for the user to play.
+
+  - id: narrate
+    objective: Answer questions about gameplay using heartbeat token data.
+
+  - id: debrief
+    objective: Summarize the session when the user says they are done.

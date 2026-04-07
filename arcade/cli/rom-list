@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# ============================================================
+#  rom-list  --  List ROMs from manifest
+# ============================================================
+#  Usage: rom-list [--format table|json]
+# ============================================================
+
+set -euo pipefail
+
+_CLI_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${_CLI_DIR}/../lib/rom-pipeline.sh"
+
+format="table"
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --format)  shift; format="${1:-table}" ;;
+        --format=*) format="${1#--format=}" ;;
+        *)  ;;
+    esac
+    shift
+done
+
+case "${format}" in
+    json)
+        rom_catalog
+        ;;
+    table|*)
+        python3 -c "
+import json, sys
+
+with open(sys.argv[1]) as f:
+    data = json.load(f)
+
+roms = data.get('roms', [])
+if not roms:
+    print('  No ROMs in catalog')
+    sys.exit(0)
+
+print()
+print('  {:<12s} {:<18s} {:<10s} {:<10s} {}'.format(
+    'SLUG', 'TITLE', 'STATUS', 'LOCATION', 'DESCRIPTION'))
+print('  ' + '-' * 72)
+for rom in roms:
+    print('  {:<12s} {:<18s} {:<10s} {:<10s} {}'.format(
+        rom['slug'], rom['title'], rom['status'],
+        rom['location'], rom['description']))
+print()
+" "${_ROM_MANIFEST}"
+        ;;
+esac

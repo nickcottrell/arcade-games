@@ -1,0 +1,2 @@
+# Vault-specific policies go here.
+# These extend (never override) platform-level policies from maestro/.claude/policies/

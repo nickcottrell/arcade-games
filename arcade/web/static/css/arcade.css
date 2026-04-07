@@ -1,0 +1,239 @@
+/*
+ * ARCADE-WEB LAYOUT
+ * Layout and positioning only — uses Haberdash tokens for spacing.
+ * Same pattern as cue-vox/static/css/style.css
+ */
+
+/* --- VRGB accents --- */
+
+.vrgb-v { color: #bf40bf; }
+.vrgb-r { color: #e64c4c; }
+.vrgb-g { color: #4caf50; }
+.vrgb-b { color: #4c7be6; }
+
+/* --- Cabinet shell (both pages) --- */
+
+body {
+    margin: 0;
+    height: 100vh;
+    overflow: hidden;
+    background: var(--background, #0e0e0e);
+    color: var(--text, #ccc);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--space-md, 1rem);
+}
+
+.powered-by {
+    text-align: center;
+    padding: var(--space-sm, 0.5rem) 0;
+}
+
+.powered-by__text {
+    color: var(--text-secondary, #666);
+    opacity: 0.6;
+}
+
+.powered-by__link {
+    color: var(--primary, #bf40bf);
+    text-decoration: none;
+}
+
+/* Override haberdash card overflow so sidebar isn't clipped */
+.cabinet-frame {
+    width: 90%;
+    height: 60%;
+    margin: auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: visible;
+}
+
+.cabinet-frame > .card__body {
+    flex: 1;
+    min-height: 0;
+    overflow: visible;
+}
+
+/* ============================================================
+   Picker
+   ============================================================ */
+
+.cabinet-picker {
+    display: flex;
+    gap: var(--space-md, 1rem);
+    height: 100%;
+    padding: var(--space-3xl, 4rem) var(--space-md, 1rem) var(--space-3xl, 4rem) var(--space-xl, 2rem);
+}
+
+/* ROM rack — left column */
+
+.rom-rack {
+    flex: 0 0 30%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: visible;
+}
+
+.rom-rack > .card__body {
+    flex: 1;
+    min-height: 0;
+}
+
+.rom-rack-header {
+    padding: var(--space-sm, 0.5rem) var(--space-md, 1rem) 0;
+    text-align: center;
+}
+
+.rom-rack-header h2 {
+    margin: 0;
+}
+
+.rom-rack-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm, 0.5rem);
+    overflow-y: auto;
+    padding: var(--space-xs, 0.25rem) var(--space-md, 1rem);
+}
+
+.rom-banner {
+    width: 100%;
+    font-weight: var(--font-weight-bold, 700);
+}
+
+.rom-banner--selected {
+    outline: 3px solid var(--primary, #bf40bf);
+    outline-offset: 2px;
+}
+
+.rom-banner--dragging {
+    opacity: 0.4;
+}
+
+.rom-banner[draggable="true"] {
+    cursor: grab;
+}
+
+.rom-banner[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+.rom-drop--hover {
+    border-color: var(--primary, #bf40bf);
+    background: var(--surface-hover, #2a2a2a);
+}
+
+/* Cartridge slot — right column */
+
+.cartridge-slot {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-md, 1rem);
+}
+
+.rom-drop {
+    width: 90%;
+    flex: 1;
+    max-height: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.rom-drop--loaded {
+    border-color: var(--primary, #bf40bf);
+    background: var(--secondary, hsl(0, 0%, 40%));
+    color: var(--drop-fg, inherit);
+}
+
+.rom-drop.rom-drop--loaded .upload__label,
+.rom-drop.rom-drop--loaded .upload__hint {
+    color: var(--drop-fg, inherit);
+}
+
+/* ============================================================
+   Player (lightbox)
+   ============================================================ */
+
+.lightbox-body {
+    padding: 0;
+}
+
+.lightbox-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.lightbox-backdrop--active {
+    display: flex;
+}
+
+.lightbox-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md, 0.75rem);
+    max-height: 90vh;
+    max-width: 90vw;
+    filter: drop-shadow(0 0 40px rgba(0, 0, 0, 0.6));
+}
+
+/* Screen — fixed square, stretch terminal to fill */
+
+.screen-bezel {
+    aspect-ratio: 1 / 1;
+    height: 70vh;
+    max-width: 90vw;
+    overflow: hidden;
+    border-radius: var(--radius-xl, 1rem);
+    background: #000;
+}
+
+.screen-viewport {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+#terminal {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--screen-bg, #0a0a0a);
+}
+
+/* Controls bar below the screen */
+
+.lightbox-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.lightbox-title {
+    font-weight: var(--font-weight-bold, 700);
+    font-size: var(--font-size-lg, 1.125rem);
+    color: var(--text, #ccc);
+    opacity: 0.7;
+}
+
+.lightbox-buttons {
+    display: flex;
+    gap: var(--space-sm, 0.5rem);
+}

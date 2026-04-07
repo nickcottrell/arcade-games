@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# ============================================================
+#  rom-promote  --  Promote a ROM from active/ to roms/
+# ============================================================
+#  Usage: rom-promote <slug>
+#
+#  Copies the game file into arcade/roms/, fixes SCRIPT_DIR
+#  resolution if needed, and updates manifest.json.
+# ============================================================
+
+set -euo pipefail
+
+_CLI_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${_CLI_DIR}/../lib/rom-pipeline.sh"
+
+slug="${1:-}"
+
+if [[ -z "${slug}" ]]; then
+    echo "Usage: rom-promote <slug>" >&2
+    echo "" >&2
+    echo "Promotable ROMs (currently in active/):" >&2
+    rom_catalog | python3 -c "
+import json, sys
+for rom in json.loads(sys.stdin.read()):
+    if rom['location'] == 'active':
+        print('  ' + rom['slug'])
+" >&2
+    exit 1
+fi
+
+rom_promote "${slug}"

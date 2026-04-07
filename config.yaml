@@ -1,0 +1,31 @@
+# Vault configuration
+# This file defines how the vault agent manages its content.
+
+vault:
+  # Set during vault init
+  name: "games"
+  version: "1.0"
+
+# Mode: full | lite | sync_only
+mode: full
+
+# Ingest behavior
+ingest:
+  auto_index: false       # auto-index on file change (future)
+  generate_descriptions: false
+  thumbnail_on_add: false
+
+# Cleanup rules
+cleanup:
+  max_hot_age_days: 0     # 0 = no auto-cleanup
+  archive_on_cleanup: true
+
+# Tool dependencies
+tools:
+  self_contained:
+    - roms
+  device_local: []
+  remote: []
+
+# Policy extensions (filenames in policies/ dir)
+policies: []
