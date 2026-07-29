@@ -1016,6 +1016,11 @@ tui_menu() {
         return 1
     fi
 
+    # Measure the real terminal -- the arcade launch path never calls
+    # _tui_measure, so without this _TUI_COLS/_TUI_ROWS stay at the 80x24
+    # defaults and the width-dependent clip below would be wrong.
+    _tui_measure
+
     local selected=0
     local visible_start=0
     local max_visible=$(( _TUI_ROWS - 6 ))
@@ -1029,6 +1034,13 @@ tui_menu() {
     echo "  ${_C_BOLD}${title}${_C_RESET}"
     echo ""
 
+    # Drop an anchor here. Every redraw restores to this point and clears
+    # to the end of the screen, then draws fresh -- so the frame never
+    # depends on counting how many physical rows the last draw used. Long
+    # labels that wrap, scroll indicators, whatever: the clear-to-end wipes
+    # them all. No cursor arithmetic to desync.
+    tput sc 2>/dev/null || true
+
     while true; do
         # Calculate visible window
         if [[ "${selected}" -lt "${visible_start}" ]]; then
@@ -1038,11 +1050,20 @@ tui_menu() {
             visible_start=$(( selected - max_visible + 1 ))
         fi
 
-        # Draw items
+        # Restore to the anchor and clear everything below it before redraw.
+        tput rc 2>/dev/null || true
+        printf "\033[J"
+
+        # Draw items. Clip each line to the terminal width so a long label
+        # can never wrap -- the frame stays one row per item.
+        local avail=$(( _TUI_COLS - 7 ))
         local i="${visible_start}"
         local drawn=0
         while [[ "${drawn}" -lt "${max_visible}" ]] && [[ "${i}" -lt "${count}" ]]; do
             local item="${items[$i]}"
+            if [[ "${avail}" -gt 0 ]] && [[ "${#item}" -gt "${avail}" ]]; then
+                item="${item:0:avail}"
+            fi
             if [[ "${i}" -eq "${selected}" ]]; then
                 printf "  ${_C_REV} > %s ${_C_RESET}\n" "${item}"
             else
@@ -1052,24 +1073,16 @@ tui_menu() {
             drawn=$((drawn + 1))
         done
 
-        # Scroll indicators
+        # Scroll indicator (only when the list is taller than the window)
         if [[ "${count}" -gt "${max_visible}" ]]; then
             local remaining=$(( count - visible_start - max_visible ))
             if [[ "${remaining}" -gt 0 ]]; then
                 printf "  ${_C_DIM}  ... %d more${_C_RESET}\n" "${remaining}"
-            else
-                echo ""
             fi
         fi
 
         # Read key
         _tui_read_key
-
-        # Calculate lines to clear
-        local clear_lines="${max_visible}"
-        if [[ "${count}" -gt "${max_visible}" ]]; then
-            clear_lines=$((clear_lines + 1))
-        fi
 
         case "${_TUI_KEY}" in
             "${_KEY_UP}")
@@ -1097,17 +1110,6 @@ tui_menu() {
                 return 1
                 ;;
         esac
-
-        # Move cursor back up to redraw
-        local up_count="${clear_lines}"
-        printf "\033[%dA" "${up_count}"
-        # Clear those lines
-        local c=0
-        while [[ "${c}" -lt "${up_count}" ]]; do
-            printf "\033[K\033[1B"
-            c=$((c + 1))
-        done
-        printf "\033[%dA" "${up_count}"
     done
 }
 
