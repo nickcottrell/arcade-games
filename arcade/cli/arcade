@@ -27,8 +27,6 @@ show_home() {
     echo ""
     vrgb_gradient_bar 270 65 45 190 65 55 "${_TUI_COLS}"
     echo ""
-    echo ""
-    tui_banner --compact
     _tui_center "${_C_DIM}[Esc] Exit${_C_RESET}"
     echo ""
     echo ""
