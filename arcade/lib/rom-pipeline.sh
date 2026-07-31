@@ -351,4 +351,80 @@ for rom in data.get('roms', []):
     done <<< "${entries}"
 }
 
+# ============================================================
+# POPULARITY RANKING  (token-pool relevance)
+# ============================================================
+#  Reorders the menu so games run hot->cold by their live heat
+#  in the token pool. Additive: call after rom_menu_items. Leaves
+#  the menu untouched when the pool is cold or scoring is absent.
+
+_rom_heat_bar() {
+    # Args: heat max -> five-dot bar (filled proportional to heat/max)
+    local filled
+    filled=$(awk -v h="$1" -v m="$2" 'BEGIN {
+        if (m <= 0) { print 0 } else { f = int(h / m * 5 + 0.5); if (f > 5) f = 5; print f }
+    }')
+    local out="" k=0
+    while [[ "${k}" -lt 5 ]]; do
+        if [[ "${k}" -lt "${filled}" ]]; then out="${out}●"; else out="${out}○"; fi
+        k=$(( k + 1 ))
+    done
+    printf "%s" "${out}"
+}
+
+rom_rank_menu() {
+    # Reorders ROM_MENU_SLUGS / ROM_MENU_LABELS by token-pool heat.
+    local pop_py="${_ROM_ARCADE_DIR}/lib/game_popularity.py"
+    local py="${_ROM_ROOT_DIR}/.venv/bin/python"
+    [[ -x "${py}" ]] || py="python3"
+    [[ -f "${pop_py}" ]] || return 0
+
+    local n=${#ROM_MENU_SLUGS[@]}
+    [[ "${n}" -gt 0 ]] || return 0
+
+    # slug -> heat map from the scorer (ARCADE_TOKENS_DIR overrides the pool)
+    local heat_slugs=() heat_vals=() s h c td="${ARCADE_TOKENS_DIR:-}"
+    while IFS=$'\t' read -r s h c; do
+        [[ -n "${s}" ]] || continue
+        heat_slugs+=("${s}"); heat_vals+=("${h}")
+    done < <("${py}" "${pop_py}" ${td:+"${td}"} 2>/dev/null)
+
+    # per-index heat
+    local heats=() i j
+    for (( i = 0; i < n; i++ )); do
+        local hv=0
+        for (( j = 0; j < ${#heat_slugs[@]}; j++ )); do
+            if [[ "${heat_slugs[$j]}" = "${ROM_MENU_SLUGS[$i]}" ]]; then hv="${heat_vals[$j]}"; break; fi
+        done
+        heats[$i]="${hv}"
+    done
+
+    # sort indices by heat desc, then original order (stable); also emit max
+    local result
+    result=$(for (( i = 0; i < n; i++ )); do printf "%s %d\n" "${heats[$i]}" "${i}"; done | "${py}" -c '
+import sys
+rows = [l.split() for l in sys.stdin if l.strip()]
+mx = max((float(r[0]) for r in rows), default=0.0)
+rows.sort(key=lambda r: (-float(r[0]), int(r[1])))
+print(mx)
+for r in rows:
+    print(r[1])')
+    local maxh; maxh=$(printf "%s\n" "${result}" | head -1)
+    local order; order=$(printf "%s\n" "${result}" | tail -n +2)
+
+    # cold pool -> leave the menu exactly as built
+    awk -v m="${maxh}" 'BEGIN { exit !(m > 0) }' || return 0
+
+    local new_slugs=() new_labels=() idx
+    while IFS= read -r idx; do
+        [[ -n "${idx}" ]] || continue
+        local bar; bar=$(_rom_heat_bar "${heats[$idx]}" "${maxh}")
+        new_slugs+=("${ROM_MENU_SLUGS[$idx]}")
+        new_labels+=("${bar}  ${ROM_MENU_LABELS[$idx]}")
+    done <<< "${order}"
+
+    ROM_MENU_SLUGS=("${new_slugs[@]}")
+    ROM_MENU_LABELS=("${new_labels[@]}")
+}
+
 _ROM_PIPELINE_LOADED=1

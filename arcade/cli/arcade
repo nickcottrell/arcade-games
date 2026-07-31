@@ -49,6 +49,9 @@ while true; do
         exit 1
     fi
 
+    # Order the menu by token-pool relevance (hottest games first).
+    rom_rank_menu || true
+
     if tui_menu "Select an app" "${ROM_MENU_LABELS[@]}"; then
         slug="${ROM_MENU_SLUGS[${TUI_INDEX}]}"
         rom_run "${slug}" || {

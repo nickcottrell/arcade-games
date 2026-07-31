@@ -7,7 +7,11 @@
       "file": "chain-chomp.sh",
       "location": "roms",
       "description": "Pac-Man meets provenance chains",
-      "libs": ["tui.sh", "vrgb.sh", "arcade-tokens.sh"],
+      "libs": [
+        "tui.sh",
+        "vrgb.sh",
+        "arcade-tokens.sh"
+      ],
       "game_id": "chomp",
       "requires_server": true,
       "status": "promoted",
@@ -20,36 +24,14 @@
       "file": "heat-trail.sh",
       "location": "roms",
       "description": "Snake meets thermal decay",
-      "libs": ["tui.sh", "vrgb.sh", "arcade-tokens.sh"],
+      "libs": [
+        "tui.sh",
+        "vrgb.sh",
+        "arcade-tokens.sh"
+      ],
       "game_id": "trail",
       "requires_server": true,
       "status": "promoted",
-      "cols": 36,
-      "rows": 22
-    },
-    {
-      "slug": "trail-fast",
-      "title": "Heat Trail (Fast)",
-      "file": "heat-trail-fast.sh",
-      "location": "roms",
-      "description": "Snake + thermal decay -- fast frame rate (0.08s)",
-      "libs": ["tui.sh", "vrgb.sh", "arcade-tokens.sh"],
-      "game_id": "trail-fast",
-      "requires_server": true,
-      "status": "experimental",
-      "cols": 36,
-      "rows": 22
-    },
-    {
-      "slug": "trail-slow",
-      "title": "Heat Trail (Slow)",
-      "file": "heat-trail-slow.sh",
-      "location": "roms",
-      "description": "Snake + thermal decay -- slow frame rate (0.25s)",
-      "libs": ["tui.sh", "vrgb.sh", "arcade-tokens.sh"],
-      "game_id": "trail-slow",
-      "requires_server": true,
-      "status": "experimental",
       "cols": 36,
       "rows": 22
     },
@@ -59,7 +41,11 @@
       "file": "spectral.sh",
       "location": "roms",
       "description": "Asteroids meets colorspace navigation",
-      "libs": ["tui.sh", "vrgb.sh", "arcade-tokens.sh"],
+      "libs": [
+        "tui.sh",
+        "vrgb.sh",
+        "arcade-tokens.sh"
+      ],
       "game_id": "spectral",
       "requires_server": true,
       "status": "promoted",
@@ -67,12 +53,66 @@
       "rows": 28
     },
     {
+      "slug": "seams",
+      "title": "Seams",
+      "file": "seams.sh",
+      "location": "roms",
+      "description": "Find where one color becomes another, and cut",
+      "libs": [
+        "tui.sh",
+        "vrgb.sh",
+        "arcade-tokens.sh"
+      ],
+      "game_id": "seams",
+      "requires_server": false,
+      "status": "experimental",
+      "cols": 56,
+      "rows": 20
+    },
+    {
+      "slug": "kenning",
+      "title": "Kenning",
+      "file": "kenning.sh",
+      "location": "roms",
+      "description": "Build metaphors -- bridge words that share a coordinate in two worlds",
+      "libs": [
+        "tui.sh",
+        "vrgb.sh",
+        "arcade-tokens.sh"
+      ],
+      "game_id": "kenning",
+      "requires_server": false,
+      "status": "experimental",
+      "cols": 68,
+      "rows": 22
+    },
+    {
+      "slug": "chess",
+      "title": "Maestro Chess",
+      "file": "chess.sh",
+      "location": "roms",
+      "description": "Real chess on the substrate -- you/CPU/GPU, moves as VRGB tokens",
+      "libs": [
+        "tui.sh",
+        "vrgb.sh"
+      ],
+      "game_id": "chess",
+      "requires_server": false,
+      "status": "experimental",
+      "cols": 62,
+      "rows": 44
+    },
+    {
       "slug": "cooker",
       "title": "Pressure Cooker",
       "file": "pressure-cooker.sh",
       "location": "roms",
       "description": "Ride the pressure curve or meltdown",
-      "libs": ["tui.sh", "vrgb.sh", "arcade-tokens.sh"],
+      "libs": [
+        "tui.sh",
+        "vrgb.sh",
+        "arcade-tokens.sh"
+      ],
       "game_id": "cooker",
       "requires_server": true,
       "status": "promoted",
@@ -85,7 +125,11 @@
       "file": "chromafall.sh",
       "location": "roms",
       "description": "Tetris meets VRGB colorspace",
-      "libs": ["tui.sh", "vrgb.sh", "arcade-tokens.sh"],
+      "libs": [
+        "tui.sh",
+        "vrgb.sh",
+        "arcade-tokens.sh"
+      ],
       "game_id": "chromafall",
       "requires_server": true,
       "status": "promoted",
@@ -98,7 +142,11 @@
       "file": "unfold.sh",
       "location": "roms",
       "description": "Dimensional box-expansion platformer",
-      "libs": ["tui.sh", "vrgb.sh", "arcade-tokens.sh"],
+      "libs": [
+        "tui.sh",
+        "vrgb.sh",
+        "arcade-tokens.sh"
+      ],
       "game_id": "unfold",
       "requires_server": true,
       "status": "promoted",
@@ -111,7 +159,11 @@
       "file": "reheat.sh",
       "location": "roms",
       "description": "Heat cooled tokens in priority order -- thermal triage tuning",
-      "libs": ["tui.sh", "vrgb.sh", "arcade-tokens.sh"],
+      "libs": [
+        "tui.sh",
+        "vrgb.sh",
+        "arcade-tokens.sh"
+      ],
       "game_id": "reheat",
       "requires_server": true,
       "status": "promoted",
@@ -124,7 +176,11 @@
       "file": "observatory.sh",
       "location": "roms",
       "description": "Monitor 9 subsystems, intervene before they fail -- the meta-game",
-      "libs": ["tui.sh", "vrgb.sh", "arcade-tokens.sh"],
+      "libs": [
+        "tui.sh",
+        "vrgb.sh",
+        "arcade-tokens.sh"
+      ],
       "game_id": "observatory",
       "requires_server": true,
       "status": "promoted",
@@ -132,39 +188,83 @@
       "rows": 18
     },
     {
-      "slug": "buff",
-      "title": "Cue-Buff",
-      "file": "cue-buff-util.sh",
-      "location": "roms",
-      "description": "Buffer cue-sheet inputs offline",
-      "libs": ["tui.sh", "vrgb.sh"],
-      "game_id": "buff",
-      "requires_server": false,
-      "status": "promoted"
-    },
-    {
-      "slug": "vault",
-      "title": "Vault Query",
-      "file": "vault-query.sh",
-      "location": "roms",
-      "description": "Search and browse the portfolio vault",
-      "libs": ["tui.sh", "vrgb.sh"],
-      "game_id": "vault",
-      "requires_server": false,
-      "status": "promoted"
-    },
-    {
       "slug": "madlibs",
       "title": "Mad Libs",
       "file": "madlibs.sh",
       "location": "roms",
       "description": "Classic word game with 110 stories and TTS readback",
-      "libs": ["announce.sh"],
+      "libs": [
+        "announce.sh"
+      ],
       "game_id": "madlibs",
       "requires_server": true,
       "status": "promoted",
       "cols": 60,
       "rows": 30
+    }
+  ],
+  "archived": [
+    {
+      "slug": "trail-fast",
+      "title": "Heat Trail (Fast)",
+      "file": "heat-trail-fast.sh",
+      "location": "archive",
+      "description": "Snake + thermal decay -- fast frame rate (0.08s)",
+      "libs": [
+        "tui.sh",
+        "vrgb.sh",
+        "arcade-tokens.sh"
+      ],
+      "game_id": "trail-fast",
+      "requires_server": true,
+      "status": "archived",
+      "cols": 36,
+      "rows": 22
+    },
+    {
+      "slug": "trail-slow",
+      "title": "Heat Trail (Slow)",
+      "file": "heat-trail-slow.sh",
+      "location": "archive",
+      "description": "Snake + thermal decay -- slow frame rate (0.25s)",
+      "libs": [
+        "tui.sh",
+        "vrgb.sh",
+        "arcade-tokens.sh"
+      ],
+      "game_id": "trail-slow",
+      "requires_server": true,
+      "status": "archived",
+      "cols": 36,
+      "rows": 22
+    },
+    {
+      "slug": "buff",
+      "title": "Cue-Buff",
+      "file": "cue-buff-util.sh",
+      "location": "archive",
+      "description": "Buffer cue-sheet inputs offline",
+      "libs": [
+        "tui.sh",
+        "vrgb.sh"
+      ],
+      "game_id": "buff",
+      "requires_server": false,
+      "status": "archived"
+    },
+    {
+      "slug": "vault",
+      "title": "Vault Query",
+      "file": "vault-query.sh",
+      "location": "archive",
+      "description": "Search and browse the portfolio vault",
+      "libs": [
+        "tui.sh",
+        "vrgb.sh"
+      ],
+      "game_id": "vault",
+      "requires_server": false,
+      "status": "archived"
     }
   ]
 }
