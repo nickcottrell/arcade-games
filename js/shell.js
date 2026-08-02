@@ -121,10 +121,12 @@
     if (active.resize) { active.resize(); }
     active.start();
     bindKeys(true);
+    bindResize(true);
   }
 
   function toPicker() {
     bindKeys(false);
+    bindResize(false);
     if (active && active.stop) { active.stop(); }
     active = null;
     activeDef = null;
@@ -214,6 +216,19 @@
 
   function dispatch(action) {
     if (active && active.action) { active.action(action); }
+  }
+
+  // Refit the canvas when the visible viewport changes -- iOS Safari showing or
+  // hiding its toolbar fires resize, as does rotation.
+  function onResize() { if (active && active.resize) { active.resize(); } }
+  function bindResize(on) {
+    if (on) {
+      window.addEventListener("resize", onResize);
+      window.addEventListener("orientationchange", onResize);
+    } else {
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onResize);
+    }
   }
 
   var LABELS = {
