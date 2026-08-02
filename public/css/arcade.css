@@ -29,7 +29,8 @@ html, body {
 .arcade {
   max-width: 520px;
   margin: 0 auto;
-  min-height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;   /* fit the VISIBLE viewport on iOS (excludes the Safari toolbar) */
   display: flex;
   flex-direction: column;
 }
@@ -89,7 +90,11 @@ html, body {
 .cabinet {
   display: flex;
   flex-direction: column;
-  flex: 1;
+  /* Exactly the visible viewport so the control pad is always reachable and
+     never hidden behind the iOS Safari bottom toolbar. dvh tracks the toolbar
+     showing/hiding; vh is the fallback for older browsers. */
+  height: 100vh;
+  height: 100dvh;
   min-height: 0;
 }
 .cabinet-bar {
