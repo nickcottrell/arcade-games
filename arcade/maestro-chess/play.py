@@ -19,11 +19,21 @@ import hashlib
 import json
 import os
 import re
+import select
 import sys
 import time
 import urllib.request
 
 import chess
+
+# Raw-terminal input for the DPAD cursor. Unix-only; guarded at the call site
+# by sys.stdin.isatty(), so a piped/non-tty seat quietly falls back to line input.
+try:
+    import termios
+    import tty
+    _RAW_OK = True
+except ImportError:
+    _RAW_OK = False
 
 OLLAMA_URL = "http://localhost:11434/api/chat"
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
@@ -37,6 +47,13 @@ GLYPH = {
     "P": "♙", "N": "♘", "B": "♗", "R": "♖", "Q": "♕", "K": "♔",
     "p": "♟", "n": "♞", "b": "♝", "r": "♜", "q": "♛", "k": "♚",
 }
+
+# DPAD overlay palette. The cursor is drawn as brackets flanking the glyph so it
+# reads on any square color; selection and legal-move hints ride the background.
+CURSOR_FG = 220    # bright yellow brackets around the hovered square
+SELECT_BG = 28     # green wash under the piece you've picked up
+CAPTURE_BG = 88    # dark red under a legal capture target
+DOT_FG = 250       # dim dot marking a legal quiet-move square
 
 # ---------------------------------------------------------------------------
 # VRGB eval-color -- a position's advantage read as a coordinate.
@@ -105,21 +122,41 @@ UCI_RE = re.compile(r"\b([a-h][1-8][a-h][1-8][qrbnQRBN]?)\b")
 SAN_RE = re.compile(r"\b(O-O-O|O-O|[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?[+#]?)\b")
 
 
-def render(board, white_name, black_name, last=None, strip=None, cp=0):
+def render(board, white_name, black_name, last=None, strip=None, cp=0,
+           cursor=None, selected=None, targets=None):
+    """Draw the board. When cursor/selected/targets are supplied (DPAD mode),
+    overlay the hovered square (brackets), the picked-up piece (green), and its
+    legal destinations (dim dots for quiet moves, red squares for captures)."""
     mid_r, mid_c = CELL_H // 2, CELL_W // 2
+    targets = targets or set()
     print()
     print(f"     \033[1m{black_name}\033[0m (black)")
     for rank in range(7, -1, -1):
         for sub in range(CELL_H):
             line = f" {rank + 1} " if sub == mid_r else "   "
             for file in range(8):
-                piece = board.piece_at(chess.square(file, rank))
-                bg = LIGHT_BG if (file + rank) % 2 else DARK_BG
+                sq = chess.square(file, rank)
+                piece = board.piece_at(sq)
+                is_cursor = cursor == sq
+                is_target = sq in targets
+                if selected == sq:
+                    bg = SELECT_BG
+                elif is_target and piece is not None:
+                    bg = CAPTURE_BG
+                else:
+                    bg = LIGHT_BG if (file + rank) % 2 else DARK_BG
                 cell = ""
                 for col in range(CELL_W):
-                    if sub == mid_r and piece and col == mid_c:
+                    center = sub == mid_r and col == mid_c
+                    if center and piece:
                         fg = 231 if piece.color == chess.WHITE else 16
                         cell += f"\033[1;38;5;{fg}m{GLYPH[piece.symbol()]}\033[22;39m"
+                    elif center and is_target:
+                        cell += f"\033[38;5;{DOT_FG}m•\033[39m"
+                    elif is_cursor and sub == mid_r and col == mid_c - 1:
+                        cell += f"\033[1;38;5;{CURSOR_FG}m[\033[22;39m"
+                    elif is_cursor and sub == mid_r and col == mid_c + 1:
+                        cell += f"\033[1;38;5;{CURSOR_FG}m]\033[22;39m"
                     else:
                         cell += " "
                 line += f"\033[48;5;{bg}m{cell}\033[0m"
@@ -271,6 +308,122 @@ def get_human_move(board):
             print("   \033[31millegal -- try again\033[0m")
 
 
+# ---------------------------------------------------------------------------
+# DPAD input -- move a cursor with the arrow keys (or WASD), press enter to pick
+# up one of your pieces, and its legal destinations light up as a hint. Press
+# enter on a highlighted square to make the move. Same referee, same legality:
+# the cursor can only ever land a move python-chess already called legal.
+# ---------------------------------------------------------------------------
+
+def _read_key(fd):
+    """Blocking single-keystroke read. Returns a symbolic action or None."""
+    ch = os.read(fd, 1).decode(errors="ignore")
+    if ch == "\x1b":  # escape -- maybe an arrow sequence, maybe a bare ESC
+        r, _, _ = select.select([fd], [], [], 0.05)
+        if r:
+            seq = os.read(fd, 2).decode(errors="ignore")
+            return {"[A": "UP", "[B": "DOWN", "[C": "RIGHT", "[D": "LEFT"}.get(seq)
+        return "ESC"
+    if ch in ("\r", "\n", " "):
+        return "SELECT"
+    low = ch.lower()
+    if low == "q":
+        return "QUIT"
+    return {"w": "UP", "s": "DOWN", "a": "LEFT", "d": "RIGHT"}.get(low)
+
+
+def _paint(board, white_name, black_name, last, strip, cp, cursor, selected, targets, msg):
+    sys.stdout.write("\033[2J\033[H")
+    render(board, white_name, black_name, last, strip, cp, cursor, selected, targets)
+    print(f"\n   \033[2m{msg}\033[0m")
+    sys.stdout.flush()
+
+
+PROMO = {"q": chess.QUEEN, "r": chess.ROOK, "b": chess.BISHOP, "n": chess.KNIGHT}
+
+
+def _ask_promotion(fd):
+    """Raw-mode promotion picker. Enter/q = queen; r/b/n = under-promote."""
+    sys.stdout.write("\r   \033[1mpromote:\033[0m [q]ueen  [r]ook  [b]ishop  k[n]ight  ")
+    sys.stdout.flush()
+    while True:
+        ch = os.read(fd, 1).decode(errors="ignore").lower()
+        if ch in ("\r", "\n"):
+            return chess.QUEEN
+        if ch in PROMO:
+            return PROMO[ch]
+
+
+def _targets_from(board, sq):
+    return {m.to_square for m in board.legal_moves if m.from_square == sq}
+
+
+def get_human_move_dpad(board, white_name, black_name, last, strip, cp):
+    """Cursor-driven move entry. Returns a chess.Move, or None to resign."""
+    fd = sys.stdin.fileno()
+    old = termios.tcgetattr(fd)
+    cursor = chess.E2 if board.turn == chess.WHITE else chess.E7
+    selected, targets = None, set()
+    hint = "arrows / WASD move · enter pick up & drop · esc unpick · q resign"
+    msg = ("\033[31mcheck! \033[0m" + hint) if board.is_check() else hint
+    try:
+        tty.setcbreak(fd)
+        while True:
+            _paint(board, white_name, black_name, last, strip, cp,
+                   cursor, selected, targets, msg)
+            key = _read_key(fd)
+            if key is None:
+                continue
+            if key == "QUIT":
+                return None
+            if key in ("UP", "DOWN", "LEFT", "RIGHT"):
+                f, r = chess.square_file(cursor), chess.square_rank(cursor)
+                if key == "UP":
+                    r = min(7, r + 1)
+                elif key == "DOWN":
+                    r = max(0, r - 1)
+                elif key == "LEFT":
+                    f = max(0, f - 1)
+                else:
+                    f = min(7, f + 1)
+                cursor = chess.square(f, r)
+                continue
+            if key == "ESC":
+                selected, targets = None, set()
+                msg = hint
+                continue
+            if key == "SELECT":
+                piece = board.piece_at(cursor)
+                if selected is None:
+                    if piece and piece.color == board.turn:
+                        targets = _targets_from(board, cursor)
+                        if targets:
+                            selected = cursor
+                            msg = "drop on a highlighted square · esc to unpick"
+                        else:
+                            msg = "that piece has no legal move -- pick another"
+                    else:
+                        msg = "pick up one of your own pieces"
+                elif cursor == selected:
+                    selected, targets = None, set()
+                    msg = hint
+                elif piece and piece.color == board.turn:
+                    targets = _targets_from(board, cursor)
+                    selected = cursor if targets else None
+                    msg = ("drop on a highlighted square · esc to unpick"
+                           if targets else "that piece has no legal move -- pick another")
+                elif cursor in targets:
+                    mover = board.piece_at(selected)
+                    promo = None
+                    if mover.piece_type == chess.PAWN and chess.square_rank(cursor) in (0, 7):
+                        promo = _ask_promotion(fd)
+                    return chess.Move(selected, cursor, promotion=promo)
+                else:
+                    msg = "not a legal square for that piece -- aim for a dot or red square"
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--white", default="human")
@@ -281,7 +434,11 @@ def main():
     ap.add_argument("--max-plies", type=int, default=0, help="0 = play to the end")
     ap.add_argument("--no-tokens", action="store_true", help="do not emit cue-mem tokens")
     ap.add_argument("--tokens-dir", default=os.path.join(ROOT, ".claude", "tokens"))
+    ap.add_argument("--classic-input", action="store_true",
+                    help="type moves (UCI/SAN) instead of the DPAD cursor")
     args = ap.parse_args()
+
+    dpad = _RAW_OK and sys.stdin.isatty() and not args.classic_input
 
     board = chess.Board()
     seats = {chess.WHITE: args.white, chess.BLACK: args.black}
@@ -294,14 +451,18 @@ def main():
         if args.max_plies and board.ply() >= args.max_plies:
             print("\n   (ply cap reached)")
             break
-        render(board, args.white, args.black, last, strip, cur_cp)
         who = seats[board.turn]
-        if who == "human":
+        if who == "human" and dpad:
+            mv = get_human_move_dpad(board, args.white, args.black, last, strip, cur_cp)
+        elif who == "human":
+            render(board, args.white, args.black, last, strip, cur_cp)
             mv = get_human_move(board)
         elif who == "cpu" or who.startswith("cpu:"):
+            render(board, args.white, args.black, last, strip, cur_cp)
             depth = int(who.split(":", 1)[1]) if ":" in who else args.depth
             mv = cpu_move(board, depth)
         else:
+            render(board, args.white, args.black, last, strip, cur_cp)
             mv = get_model_move(who, board, args.budget, args.temp)
         if mv is None:
             side = "White" if board.turn == chess.WHITE else "Black"
