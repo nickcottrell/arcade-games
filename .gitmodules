@@ -1,0 +1,4 @@
+[submodule ".node-checks"]
+	path = .node-checks
+	url = /Users/nickcottrell/Repositories/node-checks
+	branch = main

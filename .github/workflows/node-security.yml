@@ -1,0 +1,18 @@
+name: node-security
+
+# Runs the node's security verb -- the SAME command the operator runs locally
+# (./node.sh security). Nothing here is CI-only.
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive        # .node-checks is a pinned submodule
+      - name: node security verb
+        run: ./node.sh security

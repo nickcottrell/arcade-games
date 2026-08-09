@@ -1,0 +1,12 @@
+name:        arcade                        # unique, matches the node
+kind:        service                       # service | op | library
+bucket:      private-brain                 # trust zone -> loopback-only posture
+path:        .                             # code lives at repo root
+summary:     terminal arcade -- bash-ROM PTY game server + web front
+entrypoint:  arcade/web/server.py
+runtime:     maestro                       # local, maestro.sh pid-managed
+endpoints:
+  - http://127.0.0.1:3001
+verbs:
+  security: .node-checks/run.sh            # the fifth verb (this scaffold)
+# test/status/deploy: not yet wired for this node
