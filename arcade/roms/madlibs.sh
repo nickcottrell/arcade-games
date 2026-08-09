@@ -79,7 +79,10 @@ fill_template() {
     local result="$template"
     local i=1
     for word in "${WORDS[@]}"; do
-        result="$(echo "$result" | sed "s|{$i}|$word|g")"
+        # literal placeholder replacement: the typed word is treated as data, never
+        # as a sed program (a crafted word could otherwise reach GNU sed's exec flag
+        # and run shell commands from untrusted PTY input -- RT-01)
+        result="${result//"{$i}"/$word}"
         i=$(( i + 1 ))
     done
     echo "$result"
