@@ -35,12 +35,21 @@ ROMS_DIR = os.path.join(ARCADE_DIR, "roms")
 PORT = int(os.environ.get("ARCADE_WEB_PORT", 3001))
 CUE_VOX_PORT = int(os.environ.get("CUE_VOX_PORT", 3000))
 
+# Bind loopback-only by default (RT-02): the arcade drives real processes over
+# an unauthenticated Socket.IO surface, so it must not be reachable off-box.
+# Deliberate LAN exposure is an operator choice via env, never the code default.
+HOST = os.environ.get("ARCADE_WEB_HOST", "127.0.0.1")
+_default_cors = "http://127.0.0.1:{p},http://localhost:{p}".format(p=PORT)
+CORS_ORIGINS = [o.strip() for o
+                in os.environ.get("ARCADE_CORS_ORIGINS", _default_cors).split(",")
+                if o.strip()]
+
 JEFF_DIR = os.path.join(MAESTRO_DIR, "tools", "jeff")
 CUE_SHEETS_DIR = os.path.join(MAESTRO_DIR, "cue-sheets")
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "arcade-vrgb"
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
+socketio = SocketIO(app, cors_allowed_origins=CORS_ORIGINS, async_mode="threading")
 
 
 def _build_template_loader():
@@ -2484,5 +2493,5 @@ def on_disconnect():
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    print("Arcade Web starting on http://localhost:{}".format(PORT))
-    socketio.run(app, host="0.0.0.0", port=PORT, debug=False, allow_unsafe_werkzeug=True)
+    print("Arcade Web starting on http://{}:{}".format(HOST, PORT))
+    socketio.run(app, host=HOST, port=PORT, debug=False, allow_unsafe_werkzeug=True)
