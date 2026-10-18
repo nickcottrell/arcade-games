@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-#  SPECTRAL  --  Asteroids meets colorspace navigation
+#  SPECTRAL  --  colorspace navigation and combat
 # ============================================================
 #  Your ship IS an HSL coordinate. Combat is proximity in
 #  colorspace. Rotate your hue to match enemies and destroy

@@ -23,7 +23,7 @@
       "title": "Heat Trail",
       "file": "heat-trail.sh",
       "location": "roms",
-      "description": "Snake meets thermal decay",
+      "description": "a cooling trail you keep fed",
       "libs": [
         "tui.sh",
         "vrgb.sh",
@@ -40,7 +40,7 @@
       "title": "Spectral",
       "file": "spectral.sh",
       "location": "roms",
-      "description": "Asteroids meets colorspace navigation",
+      "description": "colorspace navigation and combat",
       "libs": [
         "tui.sh",
         "vrgb.sh",
@@ -124,7 +124,7 @@
       "title": "Chromafall",
       "file": "chromafall.sh",
       "location": "roms",
-      "description": "Tetris meets VRGB colorspace",
+      "description": "falling color blocks in VRGB colorspace",
       "libs": [
         "tui.sh",
         "vrgb.sh",
@@ -209,7 +209,7 @@
       "title": "Heat Trail (Fast)",
       "file": "heat-trail-fast.sh",
       "location": "archive",
-      "description": "Snake + thermal decay -- fast frame rate (0.08s)",
+      "description": "Cooling trail -- fast frame rate (0.08s)",
       "libs": [
         "tui.sh",
         "vrgb.sh",
@@ -226,7 +226,7 @@
       "title": "Heat Trail (Slow)",
       "file": "heat-trail-slow.sh",
       "location": "archive",
-      "description": "Snake + thermal decay -- slow frame rate (0.25s)",
+      "description": "Cooling trail -- slow frame rate (0.25s)",
       "libs": [
         "tui.sh",
         "vrgb.sh",

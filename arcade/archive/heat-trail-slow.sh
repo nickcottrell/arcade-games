@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-#  HEAT TRAIL (SLOW)  --  Snake meets thermal decay
+#  HEAT TRAIL (SLOW)  --  a cooling trail you keep fed
 # ============================================================
 #  Experimental variant: low frame rate (0.25s / ~4 FPS)
 #  Same decay rate in ticks -- slower real-time decay.
@@ -32,7 +32,7 @@ ARENA_H=15
 # GAME STATE
 # ============================================================
 
-# Snake body: parallel arrays (head = index 0)
+# Trail body: parallel arrays (head = index 0)
 BODY_X=()
 BODY_Y=()
 BODY_HEAT=()
@@ -89,7 +89,7 @@ spawn_food() {
 # ============================================================
 
 game_init() {
-    # Snake starts in center, 3 segments long, moving right
+    # Trail starts in center, 3 segments long, moving right
     local cx=$((ARENA_W / 2))
     local cy=$((ARENA_H / 2))
     BODY_X=("${cx}" "$((cx - 1))" "$((cx - 2))")
@@ -393,7 +393,7 @@ main() {
     game_init
     _TRAIL_MAX_CHAIN=${#BODY_X[@]}
 
-    # Tick-based speed: snake moves every MOVE_TICKS ticks
+    # Tick-based speed: trail moves every MOVE_TICKS ticks
     local move_ticks=1
     local tick_count=0
 
@@ -456,7 +456,7 @@ main() {
             fi
         fi
 
-        # Only move snake on tick intervals (controls effective speed)
+        # Only move trail on tick intervals (controls effective speed)
         tick_count=$((tick_count + 1))
         if [[ "${tick_count}" -ge "${move_ticks}" ]]; then
             update

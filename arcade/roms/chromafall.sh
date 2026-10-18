@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ============================================================
-#  CHROMAFALL  --  Tetris meets VRGB colorspace
+#  CHROMAFALL  --  falling color blocks in VRGB colorspace
 # ============================================================
-#  Stack falling tetrominoes. Clear lines. Each piece carries
+#  Stack falling four-cell pieces. Clear lines. Each piece carries
 #  a unique hue from the VRGB color wheel.  Cleared lines
 #  emit tokens tagged with the dominant hue of that row.
 #
@@ -30,7 +30,7 @@ FIELD_H=20
 FIELD=()
 
 # ============================================================
-# PIECES  (7 tetrominoes, 4 rotations each)
+# PIECES  (7 four-cell pieces, 4 rotations each)
 # ============================================================
 # Each rotation encoded as "x0 y0 x1 y1 x2 y2 x3 y3"
 # relative to pivot point.
@@ -245,7 +245,7 @@ _clear_lines() {
         if [[ "${DROP_RATE}" -lt 1 ]]; then DROP_RATE=1; fi
 
         if [[ "${cleared}" -ge 4 ]]; then
-            arcade_buffer_token "tetris" "${cleared}" \
+            arcade_buffer_token "line_clear" "${cleared}" \
                 --base-temp "${ARCADE_PRESET_PULSE_TEMP}" --cooling-rate "${ARCADE_PRESET_PULSE_RATE}"
         fi
     fi

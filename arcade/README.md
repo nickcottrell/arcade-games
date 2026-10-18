@@ -17,12 +17,12 @@ That data feeds back into the platform. If players consistently struggle when de
 | Slug | Title | Mechanic | System Concept |
 |------|-------|----------|---------------|
 | chomp | Chain Chomp | Dino grazing a provenance chain | Consecutive action chains build value; thermal dot decay |
-| trail | Heat Trail | Snake + thermal decay | Body segments cool and shed; eat or die |
+| trail | Heat Trail | Cooling trail | Body segments cool and shed; eat or die |
 | trail-fast | Heat Trail (Fast) | Same, 0.08s frame rate | Stress test at high speed |
 | trail-slow | Heat Trail (Slow) | Same, 0.25s frame rate | Relaxed difficulty for observation |
-| spectral | Spectral | Asteroids + colorspace navigation | Ship IS an HSL coordinate; combat is hue proximity |
+| spectral | Spectral | Colorspace navigation + combat | Ship IS an HSL coordinate; combat is hue proximity |
 | cooker | Pressure Cooker | Catch items + pressure zones | Pressure system IS the difficulty knob |
-| chromafall | Chromafall | Tetris + VRGB hues | Each piece carries a hue; cleared lines emit color tokens |
+| chromafall | Chromafall | Falling blocks + VRGB hues | Each piece carries a hue; cleared lines emit color tokens |
 | unfold | Unfold | Platformer + dimensional expansion | Box grows per level; platforms thermally decay |
 | reheat | Reheat | Grid triage | Heat cooled tokens in priority order; chain bonus for hottest-first |
 | observatory | Observatory | 9-subsystem monitor | Intervene before subsystems fail; the meta-game |
@@ -82,7 +82,7 @@ Pressure Cooker's entire game IS the pressure system. The medium zone is the swe
 
 **Source:** Spectral, Chromafall
 
-In Spectral, your ship rotates through hue-space to match enemy colors. Exact matches (distance < 5) are hard to hit but very rewarding. Hot matches (5-15) are easier. Warm matches (15-30) damage you. In Chromafall, each tetromino carries a hue, and cleared rows emit the dominant color as a token.
+In Spectral, your ship rotates through hue-space to match enemy colors. Exact matches (distance < 5) are hard to hit but very rewarding. Hot matches (5-15) are easier. Warm matches (15-30) damage you. In Chromafall, each falling piece carries a hue, and cleared rows emit the dominant color as a token.
 
 **Insight:** Players quickly learn to navigate the hue wheel (left/right rotation feels natural). But precise matching is difficult -- the difference between hue 115 and hue 125 is not visually obvious at game speed. This means VRGB categories should use wide hue bands, not narrow ones. The 30-degree "analogous" threshold from the game design matches human perceptual boundaries.
 
