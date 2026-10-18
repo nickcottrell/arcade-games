@@ -6,7 +6,7 @@
       "title": "Chain Chomp",
       "file": "chain-chomp.sh",
       "location": "roms",
-      "description": "Pac-Man meets provenance chains",
+      "description": "A dino grazing a provenance chain",
       "libs": [
         "tui.sh",
         "vrgb.sh",

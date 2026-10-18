@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # ============================================================
-#  CHAIN CHOMP  --  Pac-Man meets provenance chains
+#  CHAIN CHOMP  --  a dino grazing a provenance chain
 # ============================================================
-#  Arrow keys. Eat dots. Avoid ghosts. That is it.
+#  Arrow keys. Graze ferns. Dodge raptors. That is it.
 #
-#  Dots decay from hot to cold to gone (thermal decay).
-#  Consecutive eats build your chain (provenance chain).
-#  Chain = score multiplier. Ghost hit = chain breaks.
-#  Power pellets (*) let you eat ghosts.
+#  Ferns decay from hot to cold to gone (thermal decay).
+#  Consecutive grazes build your chain (provenance chain).
+#  Chain = score multiplier. Raptor hit = chain breaks.
+#  Roar pellets (*) let you turn and eat the raptors.
 # ============================================================
 
 set -euo pipefail
@@ -45,10 +45,10 @@ MAP_TMPL=(
 START_PX=10
 START_PY=7
 
-# Ghost starts
-START_GX=(5 15)
-START_GY=(5 5)
-NUM_GHOSTS=2
+# Raptor starts
+START_RX=(5 15)
+START_RY=(5 5)
+NUM_RAPTORS=2
 
 # ============================================================
 # GAME STATE
@@ -59,7 +59,7 @@ WALL=()
 TOKEN=()     # 0=none 1=cold 2=warm 3=hot 9=power
 
 PX=0 PY=0
-GX=() GY=()
+RX=() RY=()
 SCARED=0     # ticks remaining in power mode
 
 SCORE=0
@@ -101,8 +101,8 @@ init_level() {
 
     PX="${START_PX}"
     PY="${START_PY}"
-    GX=("${START_GX[@]}")
-    GY=("${START_GY[@]}")
+    RX=("${START_RX[@]}")
+    RY=("${START_RY[@]}")
     SCARED=0
     TICK=0
 }
@@ -176,14 +176,14 @@ pickup_token() {
 
 check_collision() {
     local i=0
-    while [[ "${i}" -lt "${NUM_GHOSTS}" ]]; do
-        if [[ "${GX[$i]}" -eq "${PX}" ]] && [[ "${GY[$i]}" -eq "${PY}" ]]; then
+    while [[ "${i}" -lt "${NUM_RAPTORS}" ]]; do
+        if [[ "${RX[$i]}" -eq "${PX}" ]] && [[ "${RY[$i]}" -eq "${PY}" ]]; then
             if [[ "${SCARED}" -gt 0 ]]; then
                 SCORE=$((SCORE + 200 * LEVEL))
-                GX[$i]=10
-                GY[$i]=5
-                # Token: ghost kill event
-                arcade_buffer_token "ghost_kill" "${LEVEL}" \
+                RX[$i]=10
+                RY[$i]=5
+                # Token: raptor kill event
+                arcade_buffer_token "raptor_kill" "${LEVEL}" \
                     --base-temp "${ARCADE_PRESET_BURST_TEMP}" --cooling-rate "${ARCADE_PRESET_BURST_RATE}"
             else
                 CHAIN=0
@@ -204,13 +204,13 @@ check_collision() {
 }
 
 # ============================================================
-# GHOST AI
+# RAPTOR AI
 # ============================================================
 
-move_ghosts() {
+move_raptors() {
     local i=0
-    while [[ "${i}" -lt "${NUM_GHOSTS}" ]]; do
-        local gx="${GX[$i]}" gy="${GY[$i]}"
+    while [[ "${i}" -lt "${NUM_RAPTORS}" ]]; do
+        local gx="${RX[$i]}" gy="${RY[$i]}"
 
         # Direction toward (or away from) player
         local dx=0 dy=0
@@ -242,15 +242,15 @@ move_ghosts() {
 
         if [[ "${adx}" -ge "${ady}" ]]; then
             if [[ "${dx}" -ne 0 ]] && can_move $((gx + dx)) "${gy}"; then
-                GX[$i]=$((gx + dx)); moved=1
+                RX[$i]=$((gx + dx)); moved=1
             elif [[ "${dy}" -ne 0 ]] && can_move "${gx}" $((gy + dy)); then
-                GY[$i]=$((gy + dy)); moved=1
+                RY[$i]=$((gy + dy)); moved=1
             fi
         else
             if [[ "${dy}" -ne 0 ]] && can_move "${gx}" $((gy + dy)); then
-                GY[$i]=$((gy + dy)); moved=1
+                RY[$i]=$((gy + dy)); moved=1
             elif [[ "${dx}" -ne 0 ]] && can_move $((gx + dx)) "${gy}"; then
-                GX[$i]=$((gx + dx)); moved=1
+                RX[$i]=$((gx + dx)); moved=1
             fi
         fi
 
@@ -264,21 +264,21 @@ move_ghosts() {
                 local tdx="${dirs[${pick}]%% *}"
                 local tdy="${dirs[${pick}]##* }"
                 if can_move $((gx + tdx)) $((gy + tdy)); then
-                    GX[$i]=$((gx + tdx))
-                    GY[$i]=$((gy + tdy))
+                    RX[$i]=$((gx + tdx))
+                    RY[$i]=$((gy + tdy))
                     break
                 fi
                 d=$((d + 1))
             done
         fi
 
-        # Check ghost-player collision after ghost moves
-        if [[ "${GX[$i]}" -eq "${PX}" ]] && [[ "${GY[$i]}" -eq "${PY}" ]]; then
+        # Check raptor-player collision after raptor moves
+        if [[ "${RX[$i]}" -eq "${PX}" ]] && [[ "${RY[$i]}" -eq "${PY}" ]]; then
             if [[ "${SCARED}" -gt 0 ]]; then
                 SCORE=$((SCORE + 200 * LEVEL))
-                GX[$i]=10
-                GY[$i]=5
-                arcade_buffer_token "ghost_kill" "${LEVEL}" \
+                RX[$i]=10
+                RY[$i]=5
+                arcade_buffer_token "raptor_kill" "${LEVEL}" \
                     --base-temp "${ARCADE_PRESET_BURST_TEMP}" --cooling-rate "${ARCADE_PRESET_BURST_RATE}"
             else
                 CHAIN=0
@@ -341,19 +341,19 @@ render() {
         while [[ "${x}" -lt "${MAP_W}" ]]; do
             local idx=$((y * MAP_W + x))
 
-            # Player?
+            # Player (dino)?
             if [[ "${x}" -eq "${PX}" ]] && [[ "${y}" -eq "${PY}" ]]; then
                 if [[ "${SCARED}" -gt 0 ]]; then
-                    printf "${_C_BOLD}${_C_CYAN}C${z}"
+                    printf "${_C_BOLD}${_C_CYAN}D${z}"
                 else
-                    printf "${_C_BOLD}${_C_GREEN}C${z}"
+                    printf "${_C_BOLD}${_C_GREEN}D${z}"
                 fi
-            # Ghost?
-            elif _is_ghost "${x}" "${y}"; then
+            # Raptor?
+            elif _is_raptor "${x}" "${y}"; then
                 if [[ "${SCARED}" -gt 0 ]]; then
-                    printf "${_C_BLUE}${_C_DIM}W${z}"
+                    printf "${_C_BLUE}${_C_DIM}r${z}"
                 else
-                    printf "${_C_BOLD}${_C_RED}W${z}"
+                    printf "${_C_BOLD}${_C_RED}R${z}"
                 fi
             # Wall?
             elif [[ "${WALL[${idx}]}" -eq 1 ]]; then
@@ -443,11 +443,11 @@ render() {
     tput el 2>/dev/null || true
 }
 
-_is_ghost() {
+_is_raptor() {
     local x="$1" y="$2"
     local i=0
-    while [[ "${i}" -lt "${NUM_GHOSTS}" ]]; do
-        if [[ "${GX[$i]}" -eq "${x}" ]] && [[ "${GY[$i]}" -eq "${y}" ]]; then
+    while [[ "${i}" -lt "${NUM_RAPTORS}" ]]; do
+        if [[ "${RX[$i]}" -eq "${x}" ]] && [[ "${RY[$i]}" -eq "${y}" ]]; then
             return 0
         fi
         i=$((i + 1))
@@ -513,8 +513,8 @@ main() {
     # Grab the token id (predictable format: ctx_arcade_chain_<timestamp>)
     _ARCADE_CHAIN_TOKEN_ID=""
 
-    # Ghost speed: ticks between moves
-    local ghost_rate=3
+    # Raptor speed: ticks between moves
+    local raptor_rate=3
     # Token decay: ticks between decay steps
     local decay_rate=50
 
@@ -568,15 +568,15 @@ main() {
         # Pressure gauge
         arcade_check_pressure
 
-        # Ghost movement (faster at higher levels)
-        ghost_rate=$((4 - LEVEL / 3))
-        if [[ "${ghost_rate}" -lt 2 ]]; then ghost_rate=2; fi
-        if [[ "${SCARED}" -gt 0 ]]; then ghost_rate=$((ghost_rate + 2)); fi
-        # Pressure: high = ghosts slow down
-        if [[ "${ARCADE_PRESSURE_ZONE}" = "high" ]]; then ghost_rate=$((ghost_rate + 1)); fi
+        # Raptor movement (faster at higher levels)
+        raptor_rate=$((4 - LEVEL / 3))
+        if [[ "${raptor_rate}" -lt 2 ]]; then raptor_rate=2; fi
+        if [[ "${SCARED}" -gt 0 ]]; then raptor_rate=$((raptor_rate + 2)); fi
+        # Pressure: high = raptors slow down
+        if [[ "${ARCADE_PRESSURE_ZONE}" = "high" ]]; then raptor_rate=$((raptor_rate + 1)); fi
 
-        if [[ $((TICK % ghost_rate)) -eq 0 ]]; then
-            move_ghosts
+        if [[ $((TICK % raptor_rate)) -eq 0 ]]; then
+            move_raptors
         fi
 
         # Token thermal decay (faster at higher levels)

@@ -16,7 +16,7 @@ That data feeds back into the platform. If players consistently struggle when de
 
 | Slug | Title | Mechanic | System Concept |
 |------|-------|----------|---------------|
-| chomp | Chain Chomp | Pac-Man + provenance chains | Consecutive action chains build value; thermal dot decay |
+| chomp | Chain Chomp | Dino grazing a provenance chain | Consecutive action chains build value; thermal dot decay |
 | trail | Heat Trail | Snake + thermal decay | Body segments cool and shed; eat or die |
 | trail-fast | Heat Trail (Fast) | Same, 0.08s frame rate | Stress test at high speed |
 | trail-slow | Heat Trail (Slow) | Same, 0.25s frame rate | Relaxed difficulty for observation |
@@ -62,7 +62,7 @@ Dots in Chain Chomp decay from hot (3) to warm (2) to cold (1) to gone (0). You 
 
 **Source:** Chain Chomp, Heat Trail
 
-In Chain Chomp, consecutive eats build a chain multiplier. One ghost hit breaks it. In Heat Trail, your body IS the chain -- stop eating and it shrinks until you die.
+In Chain Chomp, consecutive eats build a chain multiplier. One raptor hit breaks it. In Heat Trail, your body IS the chain -- stop eating and it shrinks until you die.
 
 **Insight:** The chain mechanic teaches that momentum has value but is expensive to rebuild. Breaking a chain is not just losing a multiplier -- it is losing the accumulated context that made the multiplier possible. This maps to conversation continuity in cue-vox: when a session breaks (restart, timeout, accidental bump), the context chain breaks. The temporal decay policy exists because of this -- it distinguishes a bump (chain preserved) from a real break (chain rebuilt).
 
@@ -72,9 +72,9 @@ In Chain Chomp, consecutive eats build a chain multiplier. One ghost hit breaks 
 
 **Source:** Pressure Cooker, Chain Chomp
 
-Pressure Cooker's entire game IS the pressure system. The medium zone is the sweet spot: 1x multiplier, manageable pace. Going too low (critical zone, 0x multiplier) is worse than going too high (meltdown risk but 2x multiplier). Chain Chomp uses pressure to modulate ghost speed and dot decay rate.
+Pressure Cooker's entire game IS the pressure system. The medium zone is the sweet spot: 1x multiplier, manageable pace. Going too low (critical zone, 0x multiplier) is worse than going too high (meltdown risk but 2x multiplier). Chain Chomp uses pressure to modulate raptor speed and fern decay rate.
 
-**Insight:** Traditional difficulty scaling (things move faster) creates a hard ceiling. Pressure scaling (throughput changes the rules) creates a dynamic equilibrium. The player self-regulates: eat fast, pressure rises, ghosts slow down (reward). Eat slow, pressure drops, dots decay faster (punishment). The system finds its own balance.
+**Insight:** Traditional difficulty scaling (things move faster) creates a hard ceiling. Pressure scaling (throughput changes the rules) creates a dynamic equilibrium. The player self-regulates: graze fast, pressure rises, raptors slow down (reward). Eat slow, pressure drops, dots decay faster (punishment). The system finds its own balance.
 
 **System implication:** The CueSheet pressure-gated inputs (prompt 48) are the right abstraction. When the system is under high pressure (many hot tokens, fast creation rate), slider defaults should shift. The user does not need to know about pressure -- they just feel the system being more urgent when it should be, and more relaxed when it can afford to be.
 
@@ -112,7 +112,7 @@ Observatory monitors 9 subsystems simultaneously. You cannot keep all 9 at 100% 
 
 **Source:** All games
 
-Every game that works is simple. Chain Chomp: eat dots, avoid ghosts. Heat Trail: eat food, do not stop. Spectral: rotate hue, match enemies. The games that do not work are the ones that try to explain too much.
+Every game that works is simple. Chain Chomp: graze ferns, dodge raptors. Heat Trail: eat food, do not stop. Spectral: rotate hue, match enemies. The games that do not work are the ones that try to explain too much.
 
 **Insight:** The platform should be the same. Cue-mem should feel like "tokens cool, heat the important ones." CueSheets should feel like "answer the questions, the system does the rest." If a module requires a paragraph to explain what it does, it is too complex.
 
